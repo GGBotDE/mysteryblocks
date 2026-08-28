@@ -1,0 +1,11 @@
+[
+  {
+    "modid": "cbbridge",
+    "name": "CustomBlocks Bridge",
+    "description": "Receives MysteryBlocks block and item data as JSON from a mineflayer bot and re-displays it. Requires MysteryBlocks (mysterymod_customblocks) to be installed.",
+    "version": "1.0.0",
+    "mcversion": "1.8.9",
+    "authorList": [],
+    "dependencies": ["mysterymod_customblocks"]
+  }
+]

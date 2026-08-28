@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+  install-from-git:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Install straight from this checkout the way a consumer installs from
+      # GitHub, so a broken exports map or a prepare script fails here.
+      - run: |
+          mkdir /tmp/consumer && cd /tmp/consumer
+          npm init -y
+          npm install "git+file://$GITHUB_WORKSPACE"
+          node -e "const {loadRegistry}=require('mysteryblocks');console.log(loadRegistry().describeState(40259).key)"
+          node --input-type=module -e "import {loadRegistry} from 'mysteryblocks';console.log(loadRegistry().blocks.length)"
+
+  client-mod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # ForgeGradle 2.1 is the last line that supports 1.8.9, and it needs the
+      # Gradle the wrapper is pinned to.
+      - run: ./gradlew setupCIWorkspace build
+        working-directory: examples/bridge/client-mod
+      - run: npm run test:java -- --strict

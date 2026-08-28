@@ -1,0 +1,12 @@
+node_modules/
+dist/
+extracted/
+*.log
+.DS_Store
+*.tsbuildinfo
+test/java/frames.json
+examples/bridge/client-mod/build/
+examples/bridge/client-mod/.gradle/
+examples/bridge/client-mod/run/
+coverage/
+*.tgz

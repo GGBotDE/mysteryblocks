@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/cb-wire.schema.json",
+  "title": "cb wire format v1",
+  "description": "JSON frames exchanged between a mineflayer bot running mineflayer-cb and a receiver mod on a Minecraft client. Over TCP each frame is one UTF-8 line; over WebSocket each frame is one message.",
+  "oneOf": [
+    { "$ref": "#/$defs/hello" },
+    { "$ref": "#/$defs/blockFrame" },
+    { "$ref": "#/$defs/itemFrame" },
+    { "$ref": "#/$defs/snapshot" },
+    { "$ref": "#/$defs/inventory" },
+    { "$ref": "#/$defs/entityItems" },
+    { "$ref": "#/$defs/registryDump" },
+    { "$ref": "#/$defs/error" },
+    { "$ref": "#/$defs/request" }
+  ],
+  "$defs": {
+    "customBlock": {
+      "type": "object",
+      "description": "One placed MysteryBlocks block. `id` is the primary handle. A receiver that has MysteryBlocks installed resolves it with Block.getBlockById(id) and block.getStateFromMeta(meta), which reproduces the block exactly. The remaining fields let a receiver without the mod show something useful.",
+      "required": ["id", "key", "meta", "stateId"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 2500, "maximum": 3327, "description": "Numeric block id = 2500 + offset in default_blocks.json" },
+        "key": { "type": "string", "pattern": "^cb:", "description": "Registry name, e.g. cb:oak_chair" },
+        "stateId": { "type": "integer", "description": "(id << 4) | meta, as it appears in the 1.8 chunk" },
+        "meta": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "blockClass": { "type": "string", "description": "MysteryBlocks block class, e.g. general.StairsBlock" },
+        "displayName": { "type": "string" },
+        "prettyName": { "type": ["string", "null"] },
+        "itemGroup": { "type": ["string", "null"] },
+        "material": { "type": ["string", "null"] },
+        "soundType": { "type": ["string", "null"] },
+        "replacement": { "type": ["string", "null"], "description": "ModBlock.getReplacement(): the vanilla block MysteryBlocks copies hardness and material from" },
+        "legacyReplacement": { "type": ["string", "null"], "description": "Same, mapped to 1.8 ids; 'name;meta' when the damage value matters" },
+        "properties": {
+          "type": "object",
+          "description": "Block state decoded from the 4 metadata bits (facing, half, open, type, ...)",
+          "additionalProperties": { "type": ["string", "boolean", "integer", "null"] }
+        },
+        "derivedFromNeighbours": {
+          "type": "boolean",
+          "description": "True when the block's visible shape also depends on adjacent blocks (fences, walls, tables, stairs, counters). The wire cannot carry that; the receiver recomputes it, or the sender must include the neighbours in a snapshot."
+        },
+        "decoder": { "type": ["string", "null"] },
+        "flags": { "type": "object" },
+        "data": { "type": "object", "description": "Raw `properties.data` block from default_blocks.json" },
+        "position": {
+          "type": "object",
+          "required": ["x", "y", "z"],
+          "properties": { "x": { "type": "integer" }, "y": { "type": "integer" }, "z": { "type": "integer" } }
+        }
+      }
+    },
+
+    "customItem": {
+      "type": "object",
+      "required": ["kind", "id", "key"],
+      "properties": {
+        "kind": { "enum": ["item", "block-item"], "description": "'block-item' is a custom block being carried as an ItemBlock; it shares the block's numeric id" },
+        "id": { "type": "integer", "minimum": 2500, "maximum": 3335 },
+        "key": { "type": "string", "pattern": "^cb:" },
+        "count": { "type": "integer" },
+        "damage": { "type": "integer" },
+        "slot": { "type": "integer" },
+        "itemClass": { "type": "string" },
+        "displayName": { "type": "string" },
+        "customName": { "type": "string", "description": "display.Name from the stack NBT. A server rename takes priority over the registry name." },
+        "lore": { "type": "array", "items": { "type": "string" } },
+        "replacement": { "type": ["string", "null"] },
+        "legacyReplacement": { "type": ["string", "null"] },
+        "toolMaterialName": { "type": ["string", "null"] },
+        "attackDamage": { "type": "number" },
+        "attackSpeed": { "type": "number" },
+        "effectiveBlocks": { "type": "array", "items": { "type": "string" } },
+        "enchantments": { "type": "object" },
+        "nbt": { "type": ["object", "null"], "description": "Full stack NBT, flattened from the prismarine tagged form" }
+      }
+    },
+
+    "hello": {
+      "type": "object",
+      "description": "Sent to every receiver on connect, and again after the MM|CustomBlocks handshake completes.",
+      "required": ["v", "kind", "registryHash"],
+      "properties": {
+        "v": { "const": 1 },
+        "kind": { "const": "hello" },
+        "mod": { "const": "mysterymod_customblocks" },
+        "modVersion": { "type": "string" },
+        "minecraftVersion": { "type": "string" },
+        "cbProtocol": { "type": "integer", "description": "MysteryBlocks protocol version (5 for 1.0.5)" },
+        "registryHash": { "type": "string", "description": "sha1 of the block+item tables; receivers should refuse mismatched senders" },
+        "idBase": { "const": 2500 },
+        "blockIdRange": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+        "itemIdRange": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+        "bot": { "type": ["string", "null"] },
+        "handshakeSent": { "type": "boolean" },
+        "counts": { "type": "object" }
+      }
+    },
+
+    "blockFrame": {
+      "type": "object",
+      "required": ["v", "kind", "block"],
+      "properties": {
+        "v": { "const": 1 },
+        "kind": { "const": "block" },
+        "ts": { "type": "integer" },
+        "dimension": { "type": ["string", "integer", "null"] },
+        "reason": { "type": "string" },
+        "block": { "oneOf": [{ "$ref": "#/$defs/customBlock" }, { "type": "null" }] }
+      }
+    },
+
+    "itemFrame": {
+      "type": "object",
+      "required": ["v", "kind", "item"],
+      "properties": {
+        "v": { "const": 1 },
+        "kind": { "const": "item" },
+        "ts": { "type": "integer" },
+        "item": { "$ref": "#/$defs/customItem" }
+      }
+    },
+
+    "snapshot": {
+      "type": "object",
+      "description": "A batch of blocks, enough to rebuild a whole structure on the receiver, including the neighbours that neighbour-derived shapes need.",
+      "required": ["v", "kind", "blocks"],
+      "properties": {
+        "v": { "const": 1 },
+        "kind": { "const": "snapshot" },
+        "ts": { "type": "integer" },
+        "dimension": { "type": ["string", "integer", "null"] },
+        "label": { "type": ["string", "null"] },
+        "origin": { "type": ["object", "null"] },
+        "count": { "type": "integer" },
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/customBlock" } }
+      }
+    },
+
+    "inventory": {
+      "type": "object",
+      "required": ["v", "kind", "items"],
+      "properties": {
+        "v": { "const": 1 },
+        "kind": { "const": "inventory" },
+        "ts": { "type": "integer" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/customItem" } }
+      }
+    },
+
+    "entityItems": {
+      "type": "object",
+      "description": "Custom items other entities are holding or wearing, from entity_equipment. Never includes another player's inventory, which the server does not send.",
+      "required": ["v", "kind", "items"],
+      "properties": {
+        "v": { "const": 1 },
+        "kind": { "const": "entity_items" },
+        "ts": { "type": "integer" },
+        "count": { "type": "integer" },
+        "reason": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["entityId", "slot", "item"],
+            "properties": {
+              "entityId": { "type": "integer" },
+              "username": { "type": ["string", "null"], "description": "Player name, or null for a non-player entity" },
+              "entityType": { "type": ["string", "null"] },
+              "slot": { "enum": ["hand", "boots", "leggings", "chestplate", "helmet"] },
+              "position": {
+                "type": ["object", "null"],
+                "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "z": { "type": "number" } }
+              },
+              "distance": { "type": ["number", "null"], "description": "Blocks from the bot, null when the entity has no position yet" },
+              "item": { "$ref": "#/$defs/customItem" }
+            }
+          }
+        }
+      }
+    },
+
+    "registryDump": {
+      "type": "object",
+      "description": "The full block and item tables, so a receiver without MysteryBlocks installed can still label everything.",
+      "required": ["v", "kind", "blocks", "items"],
+      "properties": {
+        "v": { "const": 1 },
+        "kind": { "const": "registry" },
+        "ts": { "type": "integer" },
+        "hash": { "type": "string" },
+        "blocks": { "type": "array" },
+        "items": { "type": "array" },
+        "itemGroups": { "type": "object" }
+      }
+    },
+
+    "error": {
+      "type": "object",
+      "required": ["v", "kind", "error"],
+      "properties": {
+        "v": { "const": 1 },
+        "kind": { "const": "error" },
+        "error": { "type": "string" }
+      }
+    },
+
+    "request": {
+      "type": "object",
+      "description": "Receiver to bridge. Sent the same way, one line or one message.",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["auth", "get_registry", "get_inventory", "get_entity_items", "get_block", "scan"] },
+        "token": { "type": "string", "description": "auth only" },
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "z": { "type": "integer" },
+        "radius": { "type": "integer", "description": "scan and get_entity_items" },
+        "limit": { "type": "integer", "description": "scan only" },
+        "match": {
+          "description": "scan and get_entity_items. A cb key or array of keys.",
+          "type": ["string", "array", "null"],
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "name": "mysteryblocks",
+  "version": "1.0.0",
+  "description": "Read MysteryBlocks (cb:) custom blocks and items on Minecraft 1.8.9, with an optional mineflayer plugin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GGBotDE/mysteryblocks.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GGBotDE/mysteryblocks/issues"
+  },
+  "homepage": "https://github.com/GGBotDE/mysteryblocks#readme",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./mineflayer": {
+      "types": "./dist/mineflayer.d.ts",
+      "default": "./dist/mineflayer.js"
+    },
+    "./prismarine": {
+      "types": "./dist/prismarine.d.ts",
+      "default": "./dist/prismarine.js"
+    },
+    "./jar": {
+      "types": "./dist/tools/jar.d.ts",
+      "default": "./dist/tools/jar.js"
+    },
+    "./registry.json": "./data/cb-registry.json",
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "mineflayer": [
+        "dist/mineflayer.d.ts"
+      ],
+      "prismarine": [
+        "dist/prismarine.d.ts"
+      ],
+      "jar": [
+        "dist/tools/jar.d.ts"
+      ]
+    }
+  },
+  "bin": {
+    "mysteryblocks-generate": "dist/tools/generate-registry.js",
+    "mysteryblocks-extract": "dist/tools/extract.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "tsc",
+    "typecheck": "tsc -p tsconfig.tools.json",
+    "extract": "tsx src/tools/extract.ts",
+    "generate": "tsx src/tools/generate-registry.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:java": "tsx test/java/capture-frames.ts && node test/java/run-contract.mjs",
+    "check": "npm run typecheck && npm run build && npm test"
+  },
+  "keywords": [
+    "minecraft",
+    "mineflayer",
+    "mysterymod",
+    "mysteryblocks",
+    "customblocks",
+    "1.8.9",
+    "griefergames"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "mineflayer": ">=4.0.0",
+    "vec3": ">=0.1.7"
+  },
+  "peerDependenciesMeta": {
+    "mineflayer": {
+      "optional": true
+    },
+    "vec3": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "@vitest/coverage-v8": "^4.1.11",
+    "minecraft-protocol": "^1.47.0",
+    "mineflayer": "^4.20.1",
+    "prismarine-block": "^1.17.1",
+    "prismarine-chunk": "^1.36.0",
+    "prismarine-item": "^1.16.0",
+    "prismarine-registry": "^1.11.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vec3": "^0.1.10",
+    "vitest": "^4.1.11",
+    "ws": "^8.18.0"
+  },
+  "private": true
+}
