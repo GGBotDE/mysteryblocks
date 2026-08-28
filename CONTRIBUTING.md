@@ -15,6 +15,10 @@ npm run check
 since it is not ours to redistribute. Grab it from CurseForge or from your own
 mods folder.
 
+Node 20 or newer for development: vitest 4 declares
+`^20.0.0 || ^22.0.0 || >=24.0.0`. The library itself runs on 18, which CI checks
+separately by running `.github/smoke.js` against the built output.
+
 `npm run check` runs the type check, the build, and both vitest suites. The end
 to end suite starts a real 1.8.9 protocol server on port 25789 and connects a
 bot to it, so nothing else may be holding 25789, 25799 or 25800.
@@ -85,6 +89,13 @@ JDK. Later ForgeGradle lines dropped 1.8.9. The wrapper is pinned, so:
 ```bash
 cd examples/bridge/client-mod
 JAVA_HOME=/path/to/jdk8 ./gradlew setupCIWorkspace build
+```
+
+If you add or replace `gradlew`, make sure git records it as executable,
+otherwise CI fails with `Permission denied`:
+
+```bash
+git update-index --chmod=+x examples/bridge/client-mod/gradlew
 ```
 
 Then, from the repo root, `npm run test:java` captures live frames from the

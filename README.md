@@ -10,6 +10,9 @@ Built against MysteryBlocks 1.0.5 for Minecraft 1.8.9 (`mysterymod_customblocks`
 npm install github:GGBotDE/mysteryblocks
 ```
 
+Node 18 or newer. Working on the repo itself needs Node 20 or newer, because
+vitest does.
+
 Not on npm. Installing from GitHub builds `dist/` through the `prepare` script,
 so nothing extra is needed on your side.
 

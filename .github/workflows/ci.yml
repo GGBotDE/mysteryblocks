@@ -9,8 +9,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      # One failing version should not cancel the others, otherwise the log only
+      # tells you about whichever job happened to fail first.
+      fail-fast: false
       matrix:
-        node: [18, 20, 22]
+        # vitest 4 needs ^20 || ^22 || >=24. Node 18 is covered by the job below,
+        # which checks the built output instead of running the suite.
+        node: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,6 +26,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
+
+  node18:
+    # engines.node says >= 18, so prove the built output runs there even though
+    # the test runner itself cannot.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node .github/smoke.js
 
   install-from-git:
     runs-on: ubuntu-latest
@@ -53,6 +72,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: chmod +x gradlew
+        working-directory: examples/bridge/client-mod
       # ForgeGradle 2.1 is the last line that supports 1.8.9, and it needs the
       # Gradle the wrapper is pinned to.
       - run: ./gradlew setupCIWorkspace build
